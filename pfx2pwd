@@ -1,0 +1,70 @@
+#!/bin/bash
+
+usage()
+{
+	echo "usage: pfx2pwd [[-o output][-p password][-h help]] input"
+	echo ""
+	echo "-o | --out-pfx		Output password protected pfx file. If not provided this will be pfx2pwd_<input>"
+	echo "-p | --password		Password for the output pfx file"
+	echo "--in-password		Password for the input pfx file"
+	echo "-h | --help		This help text"
+}
+
+inpfx=
+outpfx=
+pw=
+inpw=
+pemfile=pfx2pwd_tmp.pem
+
+# Get inpfx from the last arg
+for inpfx in $@; do :; done
+
+# Get the rest of args
+while [ "$1" != "" ]; do
+	case $1 in
+		-i | --in-pfx )
+			shift
+			inpfx=$1
+			;;
+		-o | --out-pfx )
+			shift
+			outpfx=$1
+			;;
+		-p | --password )
+			shift
+			pw=$1
+			;;
+		-h | --help )
+			usage
+			exit 1
+	esac
+	shift
+done
+
+if [ "$inpfx" = "" ]; then
+	echo "Missing input pfx"
+	exit 1
+fi
+
+if [ "$outpfx" = "" ]; then
+	echo "Missing output pfx, prefix input"
+	outpfx="pfx2pwd_$inpfx"
+fi
+
+if [ "$inpfx" = "$outpfx" ]; then
+	echo "Output pfx can not be the same as input pfx"
+	exit 1
+fi
+
+if [ "$pw" = "" ]; then
+	read -s -p "Enter password: " pw
+fi
+
+# pfx to pem
+openssl pkcs12 -in $inpfx -out $pemfile -nodes -password pass:$inpw
+
+# pem to pfx with password
+openssl pkcs12 -export -out $outpfx -in $pemfile -password pass:$pw
+
+# clean up
+rm $pemfile
